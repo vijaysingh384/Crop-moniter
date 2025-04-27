@@ -112,9 +112,13 @@ CREATE TABLE IF NOT EXISTS pension_claims (
     approval_date TIMESTAMP NULL,
     approved_by INT NULL,
     notes TEXT,
+    reviewed_by INT NULL,
+    admin_comments TEXT NULL,
+    reviewed_at TIMESTAMP NULL,
     FOREIGN KEY (citizen_id) REFERENCES citizen_profiles(citizen_id) ON DELETE CASCADE,
     FOREIGN KEY (scheme_id) REFERENCES pension_schemes(scheme_id) ON DELETE CASCADE,
-    FOREIGN KEY (approved_by) REFERENCES users(user_id) ON DELETE SET NULL
+    FOREIGN KEY (approved_by) REFERENCES users(user_id) ON DELETE SET NULL,
+    FOREIGN KEY (reviewed_by) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- Citizen pension enrollments

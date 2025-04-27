@@ -17,7 +17,7 @@ if ($userId) {
     $stmt->execute([$userId]);
     $locationData = $stmt->fetch();
     
-    if ($locationData && $locationData['farm_latitude'] && $locationData['farm_longitude']) {
+    if (is_array($locationData) && $locationData['farm_latitude'] && $locationData['farm_longitude']) {
         $defaultLatitude = $locationData['farm_latitude'];
         $defaultLongitude = $locationData['farm_longitude'];
         $locationName = $locationData['location_name'];

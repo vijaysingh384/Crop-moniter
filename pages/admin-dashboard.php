@@ -1,13 +1,18 @@
 <?php
 // Admin Dashboard
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
-    header("Location: index.php?page=login");
+// session_start(); // Removed duplicate session_start()
+// Enhanced security check
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'admin') {
+    // Log unauthorized access attempt
+    error_log("Unauthorized access attempt to admin dashboard. IP: " . $_SERVER['REMOTE_ADDR']);
+    header("Location: index.php?page=login&error=unauthorized");
     exit;
 }
 
 // Get admin data
 $userId = $_SESSION['user_id'];
 $adminData = null;
+$error_message = null;
 
 try {
     $stmt = $db->prepare("
@@ -18,8 +23,21 @@ try {
     ");
     $stmt->execute([$userId]);
     $adminData = $stmt->fetch();
+    
+    if (!$adminData) {
+        throw new Exception("Admin profile not found");
+    }
 } catch (PDOException $e) {
-    error_log("Error fetching admin data: " . $e->getMessage());
+    error_log("Database error in admin dashboard: " . $e->getMessage());
+    $error_message = "A database error occurred. Please try again later.";
+} catch (Exception $e) {
+    error_log("Error in admin dashboard: " . $e->getMessage());
+    $error_message = $e->getMessage();
+}
+
+// Display error message if any
+if ($error_message) {
+    echo '<div class="alert alert-danger">' . htmlspecialchars($error_message) . '</div>';
 }
 
 // Get some system statistics
@@ -71,13 +89,37 @@ try {
 } catch (PDOException $e) {
     error_log("Error fetching recent claims: " . $e->getMessage());
 }
+
+// Handle admin profile creation if missing
+if (isset($_POST['create_admin_profile'])) {
+    $fullName = trim($_POST['full_name']);
+    $department = trim($_POST['department']);
+    $role = trim($_POST['role']);
+    $userId = $_SESSION['user_id'];
+    $errors = [];
+    if (empty($fullName)) $errors[] = 'Full name is required.';
+    if (empty($department)) $errors[] = 'Department is required.';
+    if (empty($role)) $errors[] = 'Role is required.';
+    if (empty($errors)) {
+        try {
+            $stmt = $db->prepare("INSERT INTO admin_profiles (user_id, full_name, department, role) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$userId, $fullName, $department, $role]);
+            header('Location: index.php?page=admin-dashboard');
+            exit;
+        } catch (PDOException $e) {
+            $error_message = 'Failed to create admin profile: ' . $e->getMessage();
+        }
+    } else {
+        $error_message = implode('<br>', $errors);
+    }
+}
 ?>
 
 <div class="container-fluid">
     <div class="row mb-4">
         <div class="col-lg-12">
             <h1 class="page-title">Admin Dashboard</h1>
-            <p class="text-muted">Welcome back, <?php echo htmlspecialchars($adminData['full_name']); ?></p>
+            <p class="text-muted">Welcome back, <?php echo is_array($adminData) ? htmlspecialchars($adminData['full_name']) : 'Admin'; ?></p>
         </div>
     </div>
     
@@ -168,26 +210,48 @@ try {
                 </div>
                 <div class="card-body">
                     <div class="profile-info">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Name:</strong></div>
-                            <div class="col-sm-8"><?php echo htmlspecialchars($adminData['full_name']); ?></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Department:</strong></div>
-                            <div class="col-sm-8"><?php echo htmlspecialchars($adminData['department']); ?></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Role:</strong></div>
-                            <div class="col-sm-8"><?php echo htmlspecialchars($adminData['role']); ?></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Email:</strong></div>
-                            <div class="col-sm-8"><?php echo htmlspecialchars($adminData['email']); ?></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Last Login:</strong></div>
-                            <div class="col-sm-8"><?php echo $adminData['last_login'] ? date('M d, Y h:i A', strtotime($adminData['last_login'])) : 'First Login'; ?></div>
-                        </div>
+                        <?php if (is_array($adminData)): ?>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Name:</strong></div>
+                                <div class="col-sm-8"><?php echo htmlspecialchars($adminData['full_name']); ?></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Department:</strong></div>
+                                <div class="col-sm-8"><?php echo htmlspecialchars($adminData['department']); ?></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Role:</strong></div>
+                                <div class="col-sm-8"><?php echo htmlspecialchars($adminData['role']); ?></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Email:</strong></div>
+                                <div class="col-sm-8"><?php echo htmlspecialchars($adminData['email']); ?></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4"><strong>Last Login:</strong></div>
+                                <div class="col-sm-8"><?php echo $adminData['last_login'] ? date('M d, Y h:i A', strtotime($adminData['last_login'])) : 'First Login'; ?></div>
+                            </div>
+                        <?php else: ?>
+                            <div class="alert alert-warning">
+                                Your admin profile is incomplete or missing. Please complete your profile below.
+                            </div>
+                            <form method="post">
+                                <input type="hidden" name="create_admin_profile" value="1">
+                                <div class="mb-3">
+                                    <label for="full_name" class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="department" class="form-label">Department</label>
+                                    <input type="text" class="form-control" id="department" name="department" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="role" class="form-label">Role</label>
+                                    <input type="text" class="form-control" id="role" name="role" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Create Profile</button>
+                            </form>
+                        <?php endif; ?>
                     </div>
                     <a href="index.php?page=edit-profile" class="btn btn-outline-primary btn-sm">Edit Profile</a>
                 </div>

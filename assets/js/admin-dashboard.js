@@ -6,109 +6,94 @@ document.addEventListener('DOMContentLoaded', function() {
     // Flagged cases chart
     const flaggedCasesChartEl = document.getElementById('flaggedCasesChart');
     if (flaggedCasesChartEl) {
-        // Sample data - in a real app, this would come from the server
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        const flaggedData = [12, 19, 15, 8, 22, 17];
-        const resolvedData = [8, 15, 12, 7, 18, 12];
-        
-        new Chart(flaggedCasesChartEl, {
-            type: 'bar',
-            data: {
-                labels: months,
-                datasets: [{
-                    label: 'Flagged Cases',
-                    data: flaggedData,
-                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
-                    borderColor: 'rgba(220, 53, 69, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Resolved Cases',
-                    data: resolvedData,
-                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
-                    borderColor: 'rgba(40, 167, 69, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Cases'
-                        }
+        fetch('api/admin/get-flagged-stats.php')
+            .then(response => response.json())
+            .then(data => {
+                new Chart(flaggedCasesChartEl, {
+                    type: 'bar',
+                    data: {
+                        labels: data.months,
+                        datasets: [{
+                            label: 'Flagged Cases',
+                            data: data.flagged,
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Resolved Cases',
+                            data: data.resolved,
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        }]
                     },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Month'
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
                         }
                     }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Flagged vs Resolved Cases',
-                        font: {
-                            size: 16
-                        }
-                    }
-                }
-            }
-        });
+                });
+            })
+            .catch(error => {
+                console.error('Error loading flagged cases data:', error);
+                flaggedCasesChartEl.parentElement.innerHTML = '<div class="alert alert-danger">Error loading chart data</div>';
+            });
     }
     
     // Pension scheme distribution chart
     const schemeDistributionChartEl = document.getElementById('schemeDistributionChart');
     if (schemeDistributionChartEl) {
-        // Sample data
-        const schemeData = {
-            'NPS': 450,
-            'NSAP': 320,
-            'PMSYM': 280,
-            'State Pension': 180,
-            'Other': 90
-        };
-        
-        new Chart(schemeDistributionChartEl, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(schemeData),
-                datasets: [{
-                    data: Object.values(schemeData),
-                    backgroundColor: [
-                        'rgba(53, 108, 182, 0.7)',
-                        'rgba(40, 167, 69, 0.7)',
-                        'rgba(255, 193, 7, 0.7)',
-                        'rgba(23, 162, 184, 0.7)',
-                        'rgba(108, 117, 125, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(53, 108, 182, 1)',
-                        'rgba(40, 167, 69, 1)',
-                        'rgba(255, 193, 7, 1)',
-                        'rgba(23, 162, 184, 1)',
-                        'rgba(108, 117, 125, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right'
+        fetch('api/admin/get-scheme-stats.php')
+            .then(response => response.json())
+            .then(data => {
+                new Chart(schemeDistributionChartEl, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(data.schemes),
+                        datasets: [{
+                            data: Object.values(data.schemes),
+                            backgroundColor: [
+                                'rgba(53, 108, 182, 0.7)',
+                                'rgba(40, 167, 69, 0.7)',
+                                'rgba(255, 193, 7, 0.7)',
+                                'rgba(23, 162, 184, 0.7)',
+                                'rgba(108, 117, 125, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(53, 108, 182, 1)',
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(255, 193, 7, 1)',
+                                'rgba(23, 162, 184, 1)',
+                                'rgba(108, 117, 125, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
                     },
-                    title: {
-                        display: true,
-                        text: 'Pension Scheme Distribution'
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Pension Scheme Distribution'
+                            }
+                        }
                     }
-                }
-            }
-        });
+                });
+            })
+            .catch(error => {
+                console.error('Error loading scheme distribution data:', error);
+                schemeDistributionChartEl.parentElement.innerHTML = '<div class="alert alert-danger">Error loading chart data</div>';
+            });
     }
     
     // Table search functionality

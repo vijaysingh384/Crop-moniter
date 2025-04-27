@@ -20,7 +20,7 @@ try {
     $stmt->execute([$userId]);
     $citizenData = $stmt->fetch();
     
-    if ($citizenData) {
+    if (is_array($citizenData)) {
         $citizenId = $citizenData['citizen_id'];
     }
 } catch (PDOException $e) {
@@ -116,7 +116,7 @@ $trackingSteps = [
         </div>
     <?php else: ?>
         <div class="row">
-            <?php if ($selectedClaim): ?>
+            <?php if ($selectedClaim && is_array($selectedClaim)): ?>
                 <!-- Claim Details View -->
                 <div class="col-md-12 mb-4">
                     <div class="card">
